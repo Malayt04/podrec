@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useNotificationStore } from "@/lib/stores/notification-store"
+import  useNotificationStore  from "@/lib/stores/notification-store"
 import { Card } from "@/components/ui/card"
 import { CheckCircle, AlertCircle, Info, X } from "lucide-react"
 import { Button } from "@/components/ui/button"

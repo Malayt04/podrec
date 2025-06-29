@@ -9,8 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { LogOut, Plus, Video, Calendar, Users } from "lucide-react"
+import { LogOut, Plus, Video, Calendar, Users, Share2 } from "lucide-react"
 import { NotificationToast } from "@/components/ui/notification-toast"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -19,6 +20,7 @@ export default function DashboardPage() {
   const [sessionTitle, setSessionTitle] = useState("")
   const [isCreating, setIsCreating] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -48,6 +50,15 @@ export default function DashboardPage() {
     logout()
     router.push("/")
   }
+
+  const handleShare = (sessionId: string) => {
+    const shareLink = `${window.location.origin}/studio/${sessionId}`;
+    navigator.clipboard.writeText(shareLink);
+    toast({
+      title: "Link Copied!",
+      description: "Session link copied to clipboard.",
+    });
+  };
 
   if (!isAuthenticated) {
     return null
@@ -155,8 +166,7 @@ export default function DashboardPage() {
                 {sessions.map((session) => (
                   <Card
                     key={session.id}
-                    className="bg-card/50 border-border hover:bg-card/70 transition-colors cursor-pointer"
-                    onClick={() => router.push(`/studio/${session.id}`)}
+                    className="bg-card/50 border-border hover:bg-card/70 transition-colors"
                   >
                     <CardHeader className="pb-3">
                       <CardTitle className="text-foreground text-lg">{session.title}</CardTitle>
@@ -170,13 +180,21 @@ export default function DashboardPage() {
                         <Users className="h-4 w-4 mr-2" />
                         {session.participantCount || 0} participants
                       </div>
-                      <div className="pt-2">
+                      <div className="pt-2 flex space-x-2">
                         <Button
                           size="sm"
                           className="w-full bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
                           variant="outline"
+                          onClick={() => router.push(`/studio/${session.id}`)}
                         >
                           Enter Studio
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleShare(session.id)}
+                        >
+                          <Share2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </CardContent>

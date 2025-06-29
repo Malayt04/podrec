@@ -1,120 +1,69 @@
 "use client"
 
-import { useState } from "react"
 import { useStudioStore } from "@/lib/stores/studio-store"
 import { Button } from "@/components/ui/button"
-import { Mic, MicOff, Video, VideoOff, Square, Circle, Settings, Monitor } from "lucide-react"
+import { Mic, MicOff, Video, VideoOff, Disc, Square } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export function RecordingControls() {
-  const {
-    isRecording,
-    audioEnabled,
-    videoEnabled,
-    startRecording,
-    stopRecording,
-    toggleAudio,
-    toggleVideo,
-    recordingDuration,
-  } = useStudioStore()
+  const { isRecording, toggleAudio, toggleVideo, participants } = useStudioStore()
+  const localParticipant = participants.find(p => p.isLocal);
 
-  const [isFullscreen, setIsFullscreen] = useState(false)
+  if (!localParticipant) return null;
 
-  const handleRecordingToggle = () => {
-    if (isRecording) {
-      stopRecording()
-    } else {
-      startRecording()
-    }
-  }
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen()
-      setIsFullscreen(true)
-    } else {
-      document.exitFullscreen()
-      setIsFullscreen(false)
-    }
-  }
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
-  }
+  const handleStartRecording = () => console.log("Start recording...");
+  const handleStopRecording = () => console.log("Stop recording...");
 
   return (
-    <div className="px-6 py-4">
-      <div className="flex items-center justify-between">
-        {/* Left Controls */}
-        <div className="flex items-center space-x-3">
-          <Button
-            variant={audioEnabled ? "default" : "destructive"}
-            size="sm"
-            onClick={toggleAudio}
-            className={audioEnabled ? "bg-muted hover:bg-muted/80 text-foreground" : ""}
-          >
-            {audioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-          </Button>
+    <TooltipProvider>
+      <div className="flex items-center justify-center space-x-4 p-4">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={toggleAudio}
+              className={!localParticipant.audioEnabled ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            >
+              {localParticipant.audioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{localParticipant.audioEnabled ? "Mute" : "Unmute"}</TooltipContent>
+        </Tooltip>
 
-          <Button
-            variant={videoEnabled ? "default" : "destructive"}
-            size="sm"
-            onClick={toggleVideo}
-            className={videoEnabled ? "bg-muted hover:bg-muted/80 text-foreground" : ""}
-          >
-            {videoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
-          </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={toggleVideo}
+              className={!localParticipant.videoEnabled ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            >
+              {localParticipant.videoEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{localParticipant.videoEnabled ? "Stop Video" : "Start Video"}</TooltipContent>
+        </Tooltip>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleFullscreen}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Monitor className="h-4 w-4" />
-          </Button>
-        </div>
+        <div className="h-8 w-px bg-border mx-4" />
 
-        {/* Center Recording Control */}
-        <div className="flex items-center space-x-4">
-          {isRecording && (
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <div className="w-2 h-2 bg-destructive rounded-full animate-pulse" />
-              <span className="font-mono">{formatDuration(recordingDuration)}</span>
-            </div>
-          )}
-
-          <Button
-            onClick={handleRecordingToggle}
-            size="lg"
-            className={
-              isRecording
-                ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground px-8"
-                : "bg-primary hover:bg-primary/90 text-primary-foreground px-8"
-            }
-          >
+        <Tooltip>
+          <TooltipTrigger asChild>
             {isRecording ? (
-              <>
+              <Button onClick={handleStopRecording} size="lg" className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 <Square className="h-5 w-5 mr-2" />
                 Stop Recording
-              </>
+              </Button>
             ) : (
-              <>
-                <Circle className="h-5 w-5 mr-2" />
+              <Button onClick={handleStartRecording} size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                <Disc className="h-5 w-5 mr-2 animate-pulse" />
                 Start Recording
-              </>
+              </Button>
             )}
-          </Button>
-        </div>
-
-        {/* Right Controls */}
-        <div className="flex items-center space-x-3">
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-            <Settings className="h-4 w-4" />
-          </Button>
-        </div>
+          </TooltipTrigger>
+          <TooltipContent>{isRecording ? "End the recording session" : "Begin recording all participants"}</TooltipContent>
+        </Tooltip>
       </div>
-    </div>
+    </TooltipProvider>
   )
 }

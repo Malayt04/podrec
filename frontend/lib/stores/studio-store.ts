@@ -1,234 +1,219 @@
-import { create } from "zustand"
+"use client";
 
-interface Participant {
-  id: string
-  name: string
-  stream?: MediaStream
-  audioEnabled: boolean
-  videoEnabled: boolean
-}
+import { create } from "zustand";
+import io, { Socket } from "socket.io-client";
+import { addNotification } from "./notification-store";
 
-interface UploadChunk {
-  id: string
-  fileName: string
-  status: "pending" | "uploading" | "completed" | "error"
-  progress: number
+// Configuration for ICE servers. Using Google's public STUN servers.
+const ICE_SERVERS = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+];
+
+export interface Participant {
+  id: string; // socket.id
+  name: string;
+  isLocal: boolean;
+  audioEnabled: boolean;
+  videoEnabled: boolean;
+  stream: MediaStream | null;
 }
 
 interface StudioState {
-  // Connection state
-  isConnected: boolean
-  sessionId: string | null
+  isConnected: boolean;
+  isRecording: boolean;
+  localStream: MediaStream | null;
+  participants: Participant[];
+  peerConnections: Record<string, RTCPeerConnection>;
+  socket: Socket | null;
+  mediaPermissionGranted: boolean;
+  mediaError: string | null;
 
-  // Media state
-  localStream: MediaStream | null
-  audioEnabled: boolean
-  videoEnabled: boolean
-
-  // Participants
-  participants: Participant[]
-
-  // Recording state
-  isRecording: boolean
-  recordingDuration: number
-  mediaRecorders: MediaRecorder[]
-
-  // Upload state
-  uploadQueue: UploadChunk[]
-  uploadProgress: number
-
-  // Actions
-  connectToSession: (sessionId: string) => Promise<void>
-  disconnect: () => void
-  initializeMedia: () => Promise<void>
-  toggleAudio: () => void
-  toggleVideo: () => void
-  startRecording: () => void
-  stopRecording: () => void
-  addParticipant: (participant: Participant) => void
-  removeParticipant: (participantId: string) => void
+  initializeMedia: () => Promise<void>;
+  connectToSession: (sessionId: string, displayName: string) => Promise<void>;
+  disconnect: () => void;
+  addParticipant: (participant: Participant) => void;
+  removeParticipant: (participantId: string) => void;
+  updateParticipant: (participantId: string, updates: Partial<Participant>) => void;
+  toggleAudio: () => void;
+  toggleVideo: () => void;
 }
 
 export const useStudioStore = create<StudioState>((set, get) => ({
-  // Initial state
   isConnected: false,
-  sessionId: null,
-  localStream: null,
-  audioEnabled: true,
-  videoEnabled: true,
-  participants: [],
   isRecording: false,
-  recordingDuration: 0,
-  mediaRecorders: [],
-  uploadQueue: [],
-  uploadProgress: 0,
+  localStream: null,
+  participants: [],
+  peerConnections: {},
+  socket: null,
+  mediaPermissionGranted: false,
+  mediaError: null,
 
-  connectToSession: async (sessionId: string) => {
+  initializeMedia: async () => {
+    set({ mediaError: null });
     try {
-      // Mock WebSocket connection - replace with actual Socket.io
-      set({ sessionId, isConnected: true })
-
-      // Simulate connection delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      console.log(`Connected to session: ${sessionId}`)
-    } catch (error) {
-      console.error("Failed to connect to session:", error)
+      if (get().localStream) return;
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      set({ localStream: stream, mediaPermissionGranted: true });
+    } catch (error: any) {
+      console.error("Error accessing media devices.", error);
+      let errorMessage = "Could not access camera/microphone. Please grant permission and ensure they are not in use.";
+      if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = "Your camera or microphone is already in use by another browser or application.";
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = "No camera or microphone found.";
+      } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = "Permission to use the camera and microphone was denied. Please update your browser settings.";
+      }
+      set({ mediaError: errorMessage, mediaPermissionGranted: false });
     }
+  },
+
+  connectToSession: async (sessionId, displayName) => {
+    const { localStream, addParticipant, removeParticipant, updateParticipant } = get();
+
+    if (!localStream) {
+      addNotification({ id: "stream-error", message: "Cannot connect without camera/mic access.", type: "error" });
+      return;
+    }
+
+    const socket = io(process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8080");
+    set({ socket, isConnected: true });
+
+    const createPeerConnection = (targetSocketId: string): RTCPeerConnection => {
+      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit("ice-candidate", { target: targetSocketId, candidate: event.candidate });
+        }
+      };
+
+      pc.ontrack = (event) => {
+        updateParticipant(targetSocketId, { stream: event.streams[0] });
+      };
+      
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+      return pc;
+    };
+
+    socket.on("connect", () => {
+      const localParticipant: Participant = {
+        id: socket.id!,
+        name: `${displayName} (You)`,
+        isLocal: true,
+        audioEnabled: true,
+        videoEnabled: true,
+        stream: localStream,
+      };
+      set({ participants: [localParticipant] });
+      socket.emit("join-room", { roomId: sessionId, displayName });
+    });
+
+    socket.on("existing-users", (users: { id: string; name: string }[]) => {
+      const pcs: Record<string, RTCPeerConnection> = {};
+      users.forEach(user => {
+        const pc = createPeerConnection(user.id);
+        pc.createOffer()
+          .then(offer => pc.setLocalDescription(offer))
+          .then(() => socket.emit("offer", { target: user.id, sdp: pc.localDescription }))
+          .catch(e => console.error("Error creating offer:", e));
+        
+        pcs[user.id] = pc;
+        addParticipant({ id: user.id, name: user.name, isLocal: false, audioEnabled: true, videoEnabled: true, stream: null });
+      });
+      set(state => ({ peerConnections: { ...state.peerConnections, ...pcs } }));
+    });
+
+    socket.on("user-joined", ({ id, name }: { id: string; name: string }) => {
+      addNotification({ id: `join-${id}`, message: `${name} has joined the session.`, type: "info" });
+      addParticipant({ id, name, isLocal: false, audioEnabled: true, videoEnabled: true, stream: null });
+    });
+    
+    socket.on("offer", ({ sdp, sender }: { sdp: RTCSessionDescriptionInit, sender: string }) => {
+      const pc = createPeerConnection(sender);
+      pc.setRemoteDescription(new RTCSessionDescription(sdp))
+        .then(() => pc.createAnswer())
+        .then(answer => pc.setLocalDescription(answer))
+        .then(() => socket.emit("answer", { target: sender, sdp: pc.localDescription }))
+        .catch(e => console.error("Error handling offer:", e));
+
+      set(state => ({ peerConnections: { ...state.peerConnections, [sender]: pc } }));
+    });
+
+    socket.on("answer", ({ sdp, sender }: { sdp: RTCSessionDescriptionInit, sender: string }) => {
+      const pc = get().peerConnections[sender];
+      if(pc) {
+          pc.setRemoteDescription(new RTCSessionDescription(sdp)).catch(e => console.error("Error setting answer:", e));
+      }
+    });
+
+    socket.on("ice-candidate", ({ candidate, sender }: { candidate: RTCIceCandidateInit, sender: string }) => {
+      const pc = get().peerConnections[sender];
+      if (pc) {
+          pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error("Error adding ICE candidate:", e));
+      }
+    });
+
+    socket.on("user-left", (socketId: string) => {
+      const { peerConnections } = get();
+      if(peerConnections[socketId]) {
+          peerConnections[socketId].close();
+          delete peerConnections[socketId];
+          set({ peerConnections });
+      }
+      removeParticipant(socketId);
+    });
+
+    socket.on("disconnect", () => get().disconnect());
   },
 
   disconnect: () => {
-    const { localStream, mediaRecorders } = get()
-
-    // Stop local stream
-    if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop())
-    }
-
-    // Stop all recordings
-    mediaRecorders.forEach((recorder) => {
-      if (recorder.state !== "inactive") {
-        recorder.stop()
-      }
-    })
-
+    const { socket, localStream, peerConnections } = get();
+    if (socket) socket.disconnect();
+    if (localStream) localStream.getTracks().forEach(track => track.stop());
+    Object.values(peerConnections).forEach(pc => pc.close());
     set({
       isConnected: false,
-      sessionId: null,
-      localStream: null,
+      socket: null,
       participants: [],
-      isRecording: false,
-      recordingDuration: 0,
-      mediaRecorders: [],
-    })
+      localStream: null,
+      peerConnections: {},
+      mediaPermissionGranted: false,
+      mediaError: null,
+    });
   },
 
-  initializeMedia: async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      })
-
-      set({ localStream: stream })
-    } catch (error) {
-      console.error("Failed to get user media:", error)
-      throw error
-    }
-  },
+  addParticipant: (participant) => set(state => ({ participants: [...state.participants, participant] })),
+  removeParticipant: (participantId) => set(state => ({ participants: state.participants.filter(p => p.id !== participantId) })),
+  updateParticipant: (participantId, updates) => set(state => ({
+    participants: state.participants.map(p => p.id === participantId ? { ...p, ...updates } : p)
+  })),
 
   toggleAudio: () => {
-    const { localStream, audioEnabled } = get()
+    const { localStream } = get();
     if (localStream) {
-      const audioTrack = localStream.getAudioTracks()[0]
+      const audioTrack = localStream.getAudioTracks()[0];
       if (audioTrack) {
-        audioTrack.enabled = !audioEnabled
-        set({ audioEnabled: !audioEnabled })
+        audioTrack.enabled = !audioTrack.enabled;
+        set(state => ({
+          participants: state.participants.map(p => p.isLocal ? { ...p, audioEnabled: audioTrack.enabled } : p)
+        }));
       }
     }
   },
 
   toggleVideo: () => {
-    const { localStream, videoEnabled } = get()
+    const { localStream } = get();
     if (localStream) {
-      const videoTrack = localStream.getVideoTracks()[0]
+      const videoTrack = localStream.getVideoTracks()[0];
       if (videoTrack) {
-        videoTrack.enabled = !videoEnabled
-        set({ videoEnabled: !videoEnabled })
+        videoTrack.enabled = !videoTrack.enabled;
+        set(state => ({
+          participants: state.participants.map(p => p.isLocal ? { ...p, videoEnabled: videoTrack.enabled } : p)
+        }));
       }
     }
   },
-
-  startRecording: () => {
-    const { localStream, participants } = get()
-    const mediaRecorders: MediaRecorder[] = []
-
-    // Record local stream
-    if (localStream) {
-      const recorder = new MediaRecorder(localStream, {
-        mimeType: "video/webm;codecs=vp9",
-      })
-
-      const chunks: Blob[] = []
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunks.push(event.data)
-
-          // Add to upload queue
-          const chunk: UploadChunk = {
-            id: Math.random().toString(36).substr(2, 9),
-            fileName: `local-${Date.now()}.webm`,
-            status: "pending",
-            progress: 0,
-          }
-
-          set((state) => ({
-            uploadQueue: [...state.uploadQueue, chunk],
-          }))
-
-          // Simulate upload
-          setTimeout(() => {
-            set((state) => ({
-              uploadQueue: state.uploadQueue.map((c) =>
-                c.id === chunk.id ? { ...c, status: "completed" as const } : c,
-              ),
-            }))
-          }, 2000)
-        }
-      }
-
-      recorder.start(10000) // 10 second chunks
-      mediaRecorders.push(recorder)
-    }
-
-    // Start recording timer
-    const timer = setInterval(() => {
-      set((state) => ({ recordingDuration: state.recordingDuration + 1 }))
-    }, 1000)
-
-    set({
-      isRecording: true,
-      mediaRecorders,
-      recordingDuration: 0,
-    })
-
-    // Store timer reference for cleanup
-    ;(get() as any).recordingTimer = timer
-  },
-
-  stopRecording: () => {
-    const { mediaRecorders } = get()
-
-    // Stop all recorders
-    mediaRecorders.forEach((recorder) => {
-      if (recorder.state !== "inactive") {
-        recorder.stop()
-      }
-    })
-
-    // Clear timer
-    const timer = (get() as any).recordingTimer
-    if (timer) {
-      clearInterval(timer)
-    }
-
-    set({
-      isRecording: false,
-      mediaRecorders: [],
-      recordingDuration: 0,
-    })
-  },
-
-  addParticipant: (participant: Participant) => {
-    set((state) => ({
-      participants: [...state.participants, participant],
-    }))
-  },
-
-  removeParticipant: (participantId: string) => {
-    set((state) => ({
-      participants: state.participants.filter((p) => p.id !== participantId),
-    }))
-  },
-}))
+}));

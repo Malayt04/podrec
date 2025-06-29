@@ -1,46 +1,43 @@
-import { create } from "zustand"
+"use client";
 
-interface Notification {
-  id: string
-  message: string
-  description?: string
-  type: "success" | "error" | "info"
-  duration?: number
-  autoHide?: boolean
+import { create } from "zustand";
+
+export interface Notification {
+  id: string;
+  message: string;
+  type: "info" | "success" | "warning" | "error";
+  duration?: number; // duration in ms
 }
 
 interface NotificationState {
-  notifications: Notification[]
-  showNotification: (message: string, type?: "success" | "error" | "info", options?: Partial<Notification>) => void
-  removeNotification: (id: string) => void
-  clearAll: () => void
+  notifications: Notification[];
+  addNotification: (notification: Omit<Notification, 'id'> & { id?: string }) => void;
+  removeNotification: (id:string) => void;
 }
 
-export const useNotificationStore = create<NotificationState>((set) => ({
+const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
-
-  showNotification: (message, type = "info", options = {}) => {
-    const notification: Notification = {
-      id: Math.random().toString(36).substr(2, 9),
-      message,
-      type,
-      duration: 5000,
-      autoHide: true,
-      ...options,
-    }
+  addNotification: (notification) => {
+    const id = notification.id || `notif_${new Date().getTime()}`;
+    const newNotification = { ...notification, id };
 
     set((state) => ({
-      notifications: [...state.notifications, notification],
-    }))
-  },
+      notifications: [...state.notifications, newNotification],
+    }));
 
+    setTimeout(() => {
+      get().removeNotification(id);
+    }, notification.duration || 5000);
+  },
   removeNotification: (id) => {
     set((state) => ({
       notifications: state.notifications.filter((n) => n.id !== id),
-    }))
+    }));
   },
+}));
 
-  clearAll: () => {
-    set({ notifications: [] })
-  },
-}))
+export const addNotification = (notification: Omit<Notification, 'id'> & { id?: string }) => {
+  useNotificationStore.getState().addNotification(notification);
+};
+
+export default useNotificationStore;

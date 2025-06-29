@@ -1,78 +1,47 @@
-"use client"
+"use client";
 
-import { useStudioStore } from "@/lib/stores/studio-store"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Mic, MicOff, Video, VideoOff, User, Crown } from "lucide-react"
+import { useStudioStore, Participant } from "@/lib/stores/studio-store";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Mic, MicOff, User } from "lucide-react";
+
+const ParticipantItem = ({ participant }: { participant: Participant }) => {
+  return (
+    <div className="flex items-center justify-between p-3 hover:bg-muted/50 rounded-lg transition-colors">
+      <div className="flex items-center space-x-3 overflow-hidden">
+        <Avatar className="h-8 w-8">
+          <AvatarFallback>{participant.name.charAt(0).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <span className="text-sm font-medium text-foreground truncate">{participant.name}</span>
+      </div>
+      <div>
+        {participant.audioEnabled ? (
+          <Mic className="h-4 w-4 text-green-400" />
+        ) : (
+          <MicOff className="h-4 w-4 text-destructive" />
+        )}
+      </div>
+    </div>
+  );
+};
 
 export function ParticipantsList() {
-  const { participants } = useStudioStore()
-
-  const allParticipants = [
-    {
-      id: "local",
-      name: "You",
-      isLocal: true,
-      audioEnabled: true,
-      videoEnabled: true,
-      isHost: true,
-    },
-    ...participants,
-  ]
+  const { participants } = useStudioStore();
 
   return (
-    <Card className="h-full bg-transparent border-0 shadow-none">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-foreground flex items-center">
-          <User className="h-5 w-5 mr-2" />
-          Participants ({allParticipants.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {allParticipants.map((participant) => (
-          <div
-            key={participant.id}
-            className="flex items-center justify-between p-3 rounded-lg bg-card/50 border border-border"
-          >
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-muted/40 rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium text-foreground">{participant.name}</span>
-                  {participant.isHost && <Crown className="h-3 w-3 text-yellow-500" />}
-                  {participant.isLocal && (
-                    <Badge variant="secondary" className="text-xs">
-                      You
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-1">
-              {participant.audioEnabled ? (
-                <Mic className="h-4 w-4 text-green-500" />
-              ) : (
-                <MicOff className="h-4 w-4 text-red-500" />
-              )}
-              {participant.videoEnabled ? (
-                <Video className="h-4 w-4 text-green-500" />
-              ) : (
-                <VideoOff className="h-4 w-4 text-red-500" />
-              )}
-            </div>
-          </div>
-        ))}
-
-        {allParticipants.length === 1 && (
-          <div className="text-center py-8 text-muted-foreground">
-            <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Waiting for participants to join...</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
+    <div className="p-4 space-y-2">
+      <h3 className="text-lg font-semibold text-foreground px-3">Participants ({participants.length})</h3>
+      {participants.length > 0 ? (
+        <div className="space-y-1">
+          {participants.map((p) => (
+            <ParticipantItem key={p.id} participant={p} />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center text-muted-foreground py-8">
+          <User className="h-8 w-8 mx-auto mb-2" />
+          <p>No one else is here yet.</p>
+        </div>
+      )}
+    </div>
+  );
 }

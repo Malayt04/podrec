@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useStudioStore } from "@/lib/stores/studio-store"
-import { useNotificationStore } from "@/lib/stores/notification-store"
+import  useNotificationStore  from "@/lib/stores/notification-store"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Upload, CheckCircle, AlertCircle } from "lucide-react"

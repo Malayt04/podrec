@@ -47,7 +47,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         id: sessionId,
         title,
         createdAt: new Date().toISOString(),
-        participantCount: 1, // Starts with the host
+        participantCount: 1,
       };
 
       set((state) => ({
