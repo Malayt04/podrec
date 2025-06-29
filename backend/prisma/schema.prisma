@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+// Based on the SQL schema from the design document 
+model Session {
+  id                String    @id @default(uuid())
+  hostId            String    @map("host_id") 
+  title             String?
+  status            String    @default("active")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  endedAt           DateTime? @map("ended_at")
+  recordingSettings Json?     @map("recording_settings")
+
+  // Relations
+  participants      Participant[]
+  finalRecordings   FinalRecording[]
+
+  @@map("sessions") // Maps this model to the 'sessions' table
+}
+
+// Based on the SQL schema from the design document 
+model Participant {
+  id           String    @id @default(uuid())
+  sessionId    String    @map("session_id")
+  userId       String?   @map("user_id")
+  displayName  String    @map("display_name")
+  joinedAt     DateTime  @default(now()) @map("joined_at")
+  leftAt       DateTime? @map("left_at")
+  isHost       Boolean   @default(false) @map("is_host")
+
+  // Relations
+  session      Session           @relation(fields: [sessionId], references: [id])
+  chunks       RecordingChunk[]
+
+  @@map("participants") // Maps this model to the 'participants' table
+}
+
+// Based on the SQL schema from the design document 
+model RecordingChunk {
+  id            String    @id @default(uuid())
+  participantId String    @map("participant_id")
+  chunkNumber   Int       @map("chunk_number")
+  filePath      String    @map("file_path")
+  fileSize      BigInt    @map("file_size")
+  durationMs    Int       @map("duration_ms")
+  uploadedAt    DateTime  @default(now()) @map("uploaded_at")
+  processed     Boolean   @default(false)
+
+  // Relations
+  participant   Participant @relation(fields: [participantId], references: [id])
+
+  @@map("recording_chunks") // Maps this model to the 'recording_chunks' table
+}
+
+// Based on the SQL schema from the design document 
+model FinalRecording {
+  id               String    @id @default(uuid())
+  sessionId        String    @map("session_id")
+  participantId    String    @map("participant_id")
+  filePath         String    @map("file_path")
+  fileSize         BigInt    @map("file_size")
+  durationMs       Int       @map("duration_ms")
+  processingStatus String    @default("pending") @map("processing_status")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  session          Session   @relation(fields: [sessionId], references: [id])
+
+  @@map("final_recordings") // Maps this model to the 'final_recordings' table
+}

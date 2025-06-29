@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 11% 7%;
+    --foreground: 210 11% 93%;
+    --card: 210 11% 9%;
+    --card-foreground: 210 11% 93%;
+    --popover: 210 11% 9%;
+    --popover-foreground: 210 11% 93%;
+    --primary: 195 100% 50%;
+    --primary-foreground: 210 11% 7%;
+    --secondary: 210 11% 15%;
+    --secondary-foreground: 210 11% 93%;
+    --muted: 210 11% 15%;
+    --muted-foreground: 210 11% 65%;
+    --accent: 210 11% 15%;
+    --accent-foreground: 210 11% 93%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 11% 93%;
+    --border: 210 11% 15%;
+    --input: 210 11% 15%;
+    --ring: 195 100% 50%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
+/* Glassmorphism effect */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Recording indicator animation */
+@keyframes recording-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.recording-indicator {
+  animation: recording-pulse 1s ease-in-out infinite;
+}
+
+/* Smooth transitions for all interactive elements */
+button,
+input,
+select,
+textarea {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Focus styles */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
