@@ -1,20 +1,23 @@
-import { create } from "zustand"
+import { create } from "zustand";
+import { useAuthStore } from "./auth-store";
 
 interface Session {
-  id: string
-  title: string
-  createdAt: string
-  participantCount?: number
+  id: string;
+  title: string;
+  createdAt: string;
+  participantCount?: number;
 }
 
 interface SessionState {
-  sessions: Session[]
-  currentSession: Session | null
-  isLoading: boolean
-  createSession: (title: string) => Promise<Session>
-  fetchSessions: () => Promise<void>
-  setCurrentSession: (session: Session) => void
+  sessions: Session[];
+  currentSession: Session | null;
+  isLoading: boolean;
+  createSession: (title: string) => Promise<Session>;
+  fetchSessions: () => Promise<void>;
+  setCurrentSession: (session: Session) => void;
 }
+
+const API_URL = "http://localhost:8080/api";
 
 export const useSessionStore = create<SessionState>((set, get) => ({
   sessions: [],
@@ -22,93 +25,52 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   isLoading: false,
 
   createSession: async (title: string) => {
-    set({ isLoading: true })
+    set({ isLoading: true });
     try {
-      // Mock API call - replace with actual API
-      const response = await fetch("/api/sessions", {
+      const token = useAuthStore.getState().token;
+      const response = await fetch(`${API_URL}/sessions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("auth-token")}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ title }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to create session")
+        throw new Error("Failed to create session");
       }
 
-      // Mock successful creation
+      const sessionId = await response.json();
+      
       const newSession: Session = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: sessionId,
         title,
         createdAt: new Date().toISOString(),
-        participantCount: 0,
-      }
+        participantCount: 1, // Starts with the host
+      };
 
       set((state) => ({
         sessions: [newSession, ...state.sessions],
         currentSession: newSession,
         isLoading: false,
-      }))
+      }));
 
-      return newSession
+      return newSession;
     } catch (error) {
-      // For demo purposes, create mock session
-      const newSession: Session = {
-        id: Math.random().toString(36).substr(2, 9),
-        title,
-        createdAt: new Date().toISOString(),
-        participantCount: 0,
-      }
-
-      set((state) => ({
-        sessions: [newSession, ...state.sessions],
-        currentSession: newSession,
-        isLoading: false,
-      }))
-
-      return newSession
+      set({ isLoading: false });
+      throw error;
     }
   },
 
   fetchSessions: async () => {
-    set({ isLoading: true })
-    try {
-      // Mock API call - replace with actual API
-      const response = await fetch("/api/sessions", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("auth-token")}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch sessions")
-      }
-
-      // Mock sessions data
-      const mockSessions: Session[] = [
-        {
-          id: "1",
-          title: "Weekly Podcast Episode #42",
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          participantCount: 3,
-        },
-        {
-          id: "2",
-          title: "Interview with Tech Expert",
-          createdAt: new Date(Date.now() - 172800000).toISOString(),
-          participantCount: 2,
-        },
-      ]
-
-      set({ sessions: mockSessions, isLoading: false })
-    } catch (error) {
-      set({ isLoading: false })
-    }
+    set({ isLoading: true });
+    // This is a placeholder as we don't have a GET /api/sessions endpoint yet.
+    // In a real app, this would fetch the user's sessions from the backend.
+    set({ sessions: [], isLoading: false });
   },
 
   setCurrentSession: (session: Session) => {
-    set({ currentSession: session })
+    set({ currentSession: session });
   },
-}))
+}));

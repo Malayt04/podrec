@@ -1,6 +1,7 @@
 import express, { Express, Request, Response } from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import cors from 'cors';
 
 import { initializeSignaling } from './signaling';
 import { authRouter } from './routes/auth.routes';
@@ -10,15 +11,17 @@ import { subscriber } from './utils/redis';
 
 const app: Express = express();
 const httpServer = createServer(app);
+const allowedOrigins = ['http://localhost:3000']
+
+const corsOptions: cors.CorsOptions = {
+  origin: allowedOrigins,
+};
 
 const io = new Server(httpServer, {
-  cors: {
-    origin: '*', 
-    methods: ['GET', 'POST'],
-  },
+  cors: corsOptions,
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 subscriber.subscribe('processing-events', (err) => {
   if (err) {
@@ -45,7 +48,9 @@ subscriber.on('message', (channel, message) => {
   }
 });
 
+app.use(cors(corsOptions));
 app.use(express.json());
+
 
 app.get('/api', (req: Request, res: Response) => {
   res.send('Podrec Backend API is running!');

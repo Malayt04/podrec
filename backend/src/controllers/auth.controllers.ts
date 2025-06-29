@@ -11,6 +11,7 @@ export const authController = {
       const user = await authService.registerUser(email, password);
       res.status(201).json({ message: 'User registered successfully', userId: user.id });
     } catch (error) {
+      console.log(error)
       res.status(500).json({ message: 'Registration failed.' });
     }
   },
@@ -24,6 +25,7 @@ export const authController = {
       }
       res.status(200).json({ message: 'Login successful', accessToken: token });
     } catch (error) {
+      console.log(error)
       res.status(500).json({ message: 'Login failed.' });
     }
   },

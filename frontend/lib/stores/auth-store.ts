@@ -1,21 +1,23 @@
-import { create } from "zustand"
-import { persist } from "zustand/middleware"
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface User {
-  id: string
-  email: string
+  id: string;
+  email: string;
 }
 
 interface AuthState {
-  user: User | null
-  token: string | null
-  isAuthenticated: boolean
-  isLoading: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string) => Promise<void>
-  logout: () => void
-  checkAuth: () => void
+  user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  checkAuth: () => void;
 }
+
+const API_URL = "http://localhost:8080/api";
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -26,64 +28,54 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
 
       login: async (email: string, password: string) => {
-        set({ isLoading: true })
+        set({ isLoading: true });
         try {
-          // Mock API call - replace with actual API
-          const response = await fetch("/api/auth/login", {
+          const response = await fetch(`${API_URL}/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
-          })
+          });
 
           if (!response.ok) {
-            throw new Error("Login failed")
+            throw new Error("Login failed");
           }
 
-          const data = await response.json()
+          const data = await response.json();
 
-          // Mock successful login
-          const mockUser = { id: "1", email }
-          const mockToken = "mock-jwt-token"
+          const tokenPayload = JSON.parse(atob(data.accessToken.split('.')[1]));
+          const user: User = { id: tokenPayload.userId, email: tokenPayload.email };
+
 
           set({
-            user: mockUser,
-            token: mockToken,
+            user: user,
+            token: data.accessToken,
             isAuthenticated: true,
             isLoading: false,
-          })
+          });
         } catch (error) {
-          // For demo purposes, allow any login
-          const mockUser = { id: "1", email }
-          const mockToken = "mock-jwt-token"
-
-          set({
-            user: mockUser,
-            token: mockToken,
-            isAuthenticated: true,
-            isLoading: false,
-          })
+          set({ isLoading: false });
+          throw error;
         }
       },
 
       register: async (email: string, password: string) => {
-        set({ isLoading: true })
+        set({ isLoading: true });
         try {
-          // Mock API call - replace with actual API
-          const response = await fetch("/api/auth/register", {
+          const response = await fetch(`${API_URL}/auth/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
-          })
+          });
 
           if (!response.ok) {
-            throw new Error("Registration failed")
+            throw new Error("Registration failed");
           }
 
-          // Auto-login after registration
-          await get().login(email, password)
+          // Auto-login after successful registration
+          await get().login(email, password);
         } catch (error) {
-          // For demo purposes, allow any registration
-          await get().login(email, password)
+          set({ isLoading: false });
+          throw error;
         }
       },
 
@@ -93,13 +85,13 @@ export const useAuthStore = create<AuthState>()(
           token: null,
           isAuthenticated: false,
           isLoading: false,
-        })
+        });
       },
 
       checkAuth: () => {
-        const { token } = get()
+        const { token } = get();
         if (token) {
-          set({ isAuthenticated: true })
+          set({ isAuthenticated: true });
         }
       },
     }),
@@ -110,6 +102,6 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
-    },
-  ),
-)
+    }
+  )
+);
