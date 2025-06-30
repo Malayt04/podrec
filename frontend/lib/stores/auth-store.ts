@@ -52,6 +52,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
+          console.log(data.accessToken);
         } catch (error) {
           set({ isLoading: false });
           throw error;
@@ -70,8 +71,6 @@ export const useAuthStore = create<AuthState>()(
           if (!response.ok) {
             throw new Error("Registration failed");
           }
-
-          // Auto-login after successful registration
           await get().login(email, password);
         } catch (error) {
           set({ isLoading: false });

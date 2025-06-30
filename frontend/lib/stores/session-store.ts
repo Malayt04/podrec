@@ -28,6 +28,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ isLoading: true });
     try {
       const token = useAuthStore.getState().token;
+      const isAuthenticated = useAuthStore.getState().isAuthenticated;
+      console.log(isAuthenticated)
+      if (!isAuthenticated || !token) {
+        throw new Error("User is not authenticated");
+      }
+      console.log(token)
       const response = await fetch(`${API_URL}/sessions`, {
         method: "POST",
         headers: {

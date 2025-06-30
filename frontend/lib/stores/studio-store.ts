@@ -77,8 +77,9 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       return;
     }
 
-    const socket = io(process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8080");
+    const socket = io("http://localhost:8080");
     set({ socket, isConnected: true });
+    console.log(socket)
 
     const createPeerConnection = (targetSocketId: string): RTCPeerConnection => {
       const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
