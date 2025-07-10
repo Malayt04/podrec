@@ -44,6 +44,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       });
 
       if (!response.ok) {
+        console.log(response)
         throw new Error("Failed to create session");
       }
 

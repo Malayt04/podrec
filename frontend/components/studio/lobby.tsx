@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {useShallow} from "zustand/shallow";
 import { useStudioStore } from "@/lib/stores/studio-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,24 +16,33 @@ interface LobbyProps {
 
 export function Lobby({ onJoin, isJoining }: LobbyProps) {
   const [displayName, setDisplayName] = useState("");
-  const { 
-    localStream, 
-    initializeMedia,
-    mediaError,
-    toggleAudio,
-    toggleVideo,
-  } = useStudioStore(state => ({
-      localStream: state.localStream,
-      initializeMedia: state.initializeMedia,
-      mediaError: state.mediaError,
-      toggleAudio: state.toggleAudio,
-      toggleVideo: state.toggleVideo,
-  }));
 
-  // Get the local participant's state for UI updates
+  const {
+      localStream,
+      initializeMedia,
+      mediaError,
+      toggleAudio,
+      toggleVideo,
+      isAudioEnabled,
+      isVideoEnabled
+    } = useStudioStore(
+      useShallow((state) => { // 👈 **Wrap the selector with useShallow
+        const localParticipant = state.participants.find((p) => p.isLocal);
+        return {
+          localStream: state.localStream,
+          initializeMedia: state.initializeMedia,
+          mediaError: state.mediaError,
+          toggleAudio: state.toggleAudio,
+          toggleVideo: state.toggleVideo,
+          isAudioEnabled: localParticipant?.audioEnabled ?? true,
+          isVideoEnabled: localParticipant?.videoEnabled ?? true,
+        };
+      })
+    );
+
+
+
   const localParticipant = useStudioStore(state => state.participants.find(p => p.isLocal));
-  const isAudioEnabled = localParticipant?.audioEnabled ?? true;
-  const isVideoEnabled = localParticipant?.videoEnabled ?? true;
   
   const videoRef = useRef<HTMLVideoElement>(null);
 
