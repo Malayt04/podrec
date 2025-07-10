@@ -40,6 +40,7 @@ export default function DashboardPage() {
       setSessionTitle("")
       router.push(`/studio/${session.id}`)
     } catch (error) {
+      alert("Failed to create session")
       console.error("Failed to create session:", error)
     } finally {
       setIsCreating(false)

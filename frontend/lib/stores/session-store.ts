@@ -17,7 +17,7 @@ interface SessionState {
   setCurrentSession: (session: Session) => void;
 }
 
-const API_URL = "http://localhost:8080/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export const useSessionStore = create<SessionState>((set, get) => ({
   sessions: [],

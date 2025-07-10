@@ -2,10 +2,10 @@
 
 import { useStudioStore } from "@/lib/stores/studio-store"
 import { Button } from "@/components/ui/button"
-import { Mic, MicOff, Video, VideoOff, Disc, Square } from "lucide-react"
+import { Mic, MicOff, Video, VideoOff, Disc, Square, PhoneOff } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
-export function RecordingControls() {
+export function RecordingControls({ onEndSession }: { onEndSession: () => void }) {
   const { isRecording, toggleAudio, toggleVideo, participants } = useStudioStore()
   const localParticipant = participants.find(p => p.isLocal);
 
@@ -17,6 +17,7 @@ export function RecordingControls() {
   return (
     <TooltipProvider>
       <div className="flex items-center justify-center space-x-4 p-4">
+        {/* Media Controls */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -47,6 +48,7 @@ export function RecordingControls() {
 
         <div className="h-8 w-px bg-border mx-4" />
 
+        {/* Recording Controls */}
         <Tooltip>
           <TooltipTrigger asChild>
             {isRecording ? (
@@ -62,6 +64,23 @@ export function RecordingControls() {
             )}
           </TooltipTrigger>
           <TooltipContent>{isRecording ? "End the recording session" : "Begin recording all participants"}</TooltipContent>
+        </Tooltip>
+
+        <div className="h-8 w-px bg-border mx-4" />
+        
+        {/* End Call Button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="destructive"
+              size="lg"
+              onClick={onEndSession}
+            >
+              <PhoneOff className="h-5 w-5 mr-2" />
+              Leave
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Leave the session</TooltipContent>
         </Tooltip>
       </div>
     </TooltipProvider>

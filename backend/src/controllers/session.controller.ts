@@ -81,7 +81,6 @@ export const sessionController = {
     console.log(`[API] Added video processing job for session ${id} to the queue.`);
 
     res.status(200).json(endedSession);
-      res.status(200).json(endedSession);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Failed to end session' });

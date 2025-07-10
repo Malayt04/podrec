@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../utils/prisma';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET as string
 
 export const authService = {
   registerUser: async  (email: string, password: string) => {
