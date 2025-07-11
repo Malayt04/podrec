@@ -1,9 +1,5 @@
 import { Queue } from 'bullmq';
-
-const redisConnection = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379', 10),
-};
+import { redisConnection } from '../utils/redis';
 
 export const videoQueue = new Queue('video-processing', {
   connection: redisConnection,
