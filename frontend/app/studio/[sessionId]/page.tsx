@@ -106,7 +106,7 @@ export default function StudioPage() {
       </div>
 
       <footer className="border-t border-border bg-card/50 backdrop-blur-sm">
-        <RecordingControls onEndSession={handleEndSession} />
+        <RecordingControls onEndSession={handleEndSession} sessionId={sessionId} />
       </footer>
 
       <UploadManager />

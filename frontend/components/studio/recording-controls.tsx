@@ -5,14 +5,18 @@ import { Button } from "@/components/ui/button"
 import { Mic, MicOff, Video, VideoOff, Disc, Square, PhoneOff } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
-export function RecordingControls({ onEndSession }: { onEndSession: () => void }) {
-  const { isRecording, toggleAudio, toggleVideo, participants } = useStudioStore()
+export function RecordingControls({ onEndSession, sessionId }: { onEndSession: () => void, sessionId: string }) {
+  const { isRecording, toggleAudio, toggleVideo, participants, startRecording, stopRecording } = useStudioStore()
   const localParticipant = participants.find(p => p.isLocal);
 
   if (!localParticipant) return null;
 
-  const handleStartRecording = () => console.log("Start recording...");
-  const handleStopRecording = () => console.log("Stop recording...");
+  const handleStartRecording = () => {
+    startRecording(sessionId);
+  };
+  const handleStopRecording = () => {
+    stopRecording();
+  };
 
   return (
     <TooltipProvider>

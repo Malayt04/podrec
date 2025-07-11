@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import io, { Socket } from "socket.io-client";
 import { addNotification } from "./notification-store";
+import { useAuthStore } from "./auth-store";
 
 const ICE_SERVERS = [{ urls: "stun:stun.l.google.com:19302" }];
 
@@ -14,6 +15,45 @@ export interface Participant {
   videoEnabled: boolean;
   stream: MediaStream | null;
 }
+
+let mediaRecorder: MediaRecorder | null = null;
+let chunkCounter = 0;
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+const uploadChunk = async (chunk: Blob, sessionId: string, participantId: string) => {
+  const token = useAuthStore.getState().token;
+  if (!token) {
+    console.error("No auth token found");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("video-chunk", chunk, `chunk-${chunkCounter}.webm`);
+  formData.append("participantId", participantId);
+  formData.append("chunkNumber", String(chunkCounter));
+  // A more accurate duration could be calculated if needed
+  formData.append("durationMs", "5000");
+
+  try {
+    const response = await fetch(`${API_URL}/sessions/${sessionId}/chunks`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Chunk upload failed with status: ${response.status}`);
+    }
+
+    console.log(`Chunk ${chunkCounter} uploaded successfully`);
+    chunkCounter++;
+  } catch (error) {
+    console.error("Error uploading chunk:", error);
+    // Optionally, implement retry logic or notify the user
+  }
+};
 
 interface StudioState {
   isConnected: boolean;
@@ -30,6 +70,8 @@ interface StudioState {
   disconnect: () => void;
   toggleAudio: () => void;
   toggleVideo: () => void;
+  startRecording: (sessionId: string) => void;
+  stopRecording: () => void;
 }
 
 export const useStudioStore = create<StudioState>((set, get) => ({
@@ -159,6 +201,37 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           participants: state.participants.map(p => p.isLocal ? { ...p, videoEnabled: videoTrack.enabled } : p)
         }));
       }
+    }
+  },
+  startRecording: (sessionId: string) => {
+    const { localStream, participants } = get();
+    const localParticipant = participants.find((p) => p.isLocal);
+
+    if (mediaRecorder || !localStream || !localParticipant) {
+      return;
+    }
+
+    const options = { mimeType: "video/webm; codecs=vp9" };
+    mediaRecorder = new MediaRecorder(localStream, options);
+    chunkCounter = 0;
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        uploadChunk(event.data, sessionId, localParticipant.id);
+      }
+    };
+
+    mediaRecorder.start(5000); // 5-second chunks
+    set({ isRecording: true });
+    addNotification({ message: "Recording started!", type: "info" });
+  },
+
+  stopRecording: () => {
+    if (mediaRecorder) {
+      mediaRecorder.stop();
+      mediaRecorder = null;
+      set({ isRecording: false });
+      addNotification({ message: "Recording stopped.", type: "info" });
     }
   },
 }));
