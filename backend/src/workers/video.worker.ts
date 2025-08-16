@@ -6,7 +6,7 @@ import path from 'path';
 import { cloudinary } from '../utils/cloudinary';
 import { prisma } from '../utils/prisma';
 import { downloadFile } from '../utils/utils';
-import { publisher, redisConnection } from '../utils/redis';
+import { redis, bullmqConnection } from '../utils/redis';
 
 cloudinary.config();
 
@@ -72,7 +72,7 @@ const processVideo = async (sessionId: string) => {
         });
 
         // 5. Publish completion event
-        await publisher.publish('processing-events', JSON.stringify({ event: 'recording:completed', sessionId, participantId: participant.id }));
+        await redis.publish('processing-events', JSON.stringify({ event: 'recording:completed', sessionId, participantId: participant.id }));
     }
 
     // 6. Cleanup
@@ -102,7 +102,7 @@ const videoWorker = new Worker('video-processing',
       throw error;
     }
   }, 
-  { connection: redisConnection }
+  { connection: bullmqConnection }
 );
 
 // Add listeners for worker events

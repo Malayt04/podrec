@@ -1,33 +1,30 @@
-import Redis from "ioredis";
+import { Redis } from "@upstash/redis";
+import RedisClient from "ioredis";
 
+let redis: Redis;
+let bullmqConnection: RedisClient;
 
-
-
-// Declare variables that will be exported
-let subscriber: Redis;
-let publisher: Redis;
-let redisConnection: any;
-
-if (process.env.REDIS_URL) {
-  console.log('✅ Using REDIS_URL for connection');
-  
-  subscriber = new Redis(process.env.REDIS_URL);
-  publisher = new Redis(process.env.REDIS_URL);
-  
-  redisConnection = { url: process.env.REDIS_URL };
-  
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  console.log("✅ Using UPSTASH_REDIS for connection");
+  redis = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  });
 } else {
-  console.log('⚠️  Using fallback host/port configuration');
-  
-  const hostConfig = {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379', 10),
-    maxRetriesPerRequest: null
-  };
-  
-  subscriber = new Redis(hostConfig);
-  publisher = new Redis(hostConfig);
-  redisConnection = hostConfig;
+  console.error("⚠️ UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set in the environment.");
+  process.exit(1);
 }
 
-export { subscriber, publisher, redisConnection };
+if (process.env.REDIS_URL) {
+    console.log('✅ Using REDIS_URL for bullmq connection');
+    bullmqConnection = new RedisClient(process.env.REDIS_URL);
+} else {
+    console.log('⚠️  Using fallback host/port configuration for bullmq');
+    bullmqConnection = new RedisClient({
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        maxRetriesPerRequest: null
+    });
+}
+
+export { redis, bullmqConnection };
