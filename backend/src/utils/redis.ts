@@ -3,6 +3,7 @@ import RedisClient from "ioredis";
 
 let redis: Redis;
 let bullmqConnection: RedisClient;
+let subscriber: RedisClient;
 
 if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
   console.log("✅ Using UPSTASH_REDIS for connection");
@@ -18,13 +19,18 @@ if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) 
 if (process.env.REDIS_URL) {
     console.log('✅ Using REDIS_URL for bullmq connection');
     bullmqConnection = new RedisClient(process.env.REDIS_URL);
+    // Create a separate subscriber instance for pub/sub
+    subscriber = new RedisClient(process.env.REDIS_URL);
 } else {
     console.log('⚠️  Using fallback host/port configuration for bullmq');
-    bullmqConnection = new RedisClient({
+    const redisConfig = {
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT || '6379', 10),
         maxRetriesPerRequest: null
-    });
+    };
+    bullmqConnection = new RedisClient(redisConfig);
+    // Create a separate subscriber instance for pub/sub
+    subscriber = new RedisClient(redisConfig);
 }
 
-export { redis, bullmqConnection };
+export { redis, bullmqConnection, subscriber };

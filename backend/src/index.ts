@@ -23,15 +23,16 @@ const io = new Server(httpServer, {
 
 const PORT = process.env.PORT || 8080;
 
-subscriber.subscribe('processing-events', (err) => {
-  if (err) {
-    console.error('Failed to subscribe to Redis channel:', err);
-  } else {
+// Subscribe to Redis channel using Promise-based approach
+subscriber.subscribe('processing-events')
+  .then(() => {
     console.log('📡 Subscribed to Redis "processing-events" channel.');
-  }
-});
+  })
+  .catch((err: Error) => {
+    console.error('Failed to subscribe to Redis channel:', err);
+  });
 
-subscriber.on('message', (channel, message) => {
+subscriber.on('message', (channel: string, message: string) => {
   console.log(`Received message from channel '${channel}': ${message}`);
   try {
     const data = JSON.parse(message);
