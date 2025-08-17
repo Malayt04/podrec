@@ -11,7 +11,7 @@ import { subscriber } from './utils/redis';
 
 const app: Express = express();
 const httpServer = createServer(app);
-const allowedOrigins = ['http://localhost:3000']
+const allowedOrigins = ['https://podrec-api.onrender.com']
 
 const corsOptions: cors.CorsOptions = {
   origin: allowedOrigins,
@@ -65,5 +65,5 @@ app.use('/api', recordingRouter);
 initializeSignaling(io);
 
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Server is running at http://localhost:${PORT}`);
+  console.log(`🚀 Server is running`);
 });
