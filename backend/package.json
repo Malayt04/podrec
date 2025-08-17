@@ -1,13 +1,14 @@
 {
-  "name": "wavelength-backend",
+  "name": "podrec-backend",
   "version": "1.0.0",
-  "description": "Backend for the Wavelength real-time collaboration app.",
+  "description": "Backend for the Podrec real-time collaboration app.",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "start:worker": "tsc && node dist/run-worker.js",
-    "dev": "npm run build && npm run start"
+      "build": "npx tsc",
+  "start": "node dist/index.js",
+  "dev": "nodemon src/index.ts",
+  "start:worker": "node dist/run-worker.js",
+  "start:all": "npm-run-all --parallel start start:worker"
   },
   "author": "",
   "license": "ISC",
@@ -28,6 +29,7 @@
     "jsonwebtoken": "^9.0.2",
     "livekit-server-sdk": "^2.1.2",
     "multer": "^2.0.1",
+    "npm-run-all": "^4.1.5",
     "prisma": "^6.10.1",
     "socket.io": "^4.8.1"
   },

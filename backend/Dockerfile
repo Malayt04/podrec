@@ -30,4 +30,4 @@ EXPOSE 8080
 ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
 
 # The default command to run when the container starts
-CMD ["npm", "run", "start"]
+CMD ["npm", "run", "start:all"]
