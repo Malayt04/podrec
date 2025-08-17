@@ -11,7 +11,7 @@ import { subscriber } from './utils/redis';
 
 const app: Express = express();
 const httpServer = createServer(app);
-const allowedOrigins = ['https://podrec-api.onrender.com']
+const allowedOrigins = ["http://localhost:3000", "https://podrec.vercel.app"];
 
 const corsOptions: cors.CorsOptions = {
   origin: allowedOrigins,
